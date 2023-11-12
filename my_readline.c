@@ -6,7 +6,7 @@
 int READLINE_READ_SIZE = 512;
 
 char *my_readline(int fd) {
-    
+    return 0;
 }
 
 int main(int ac, char **av) {
