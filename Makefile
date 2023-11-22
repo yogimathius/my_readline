@@ -4,7 +4,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -Wall
+CFLAGS = -Wall -g3 -fsanitize=address
 
 # Source file
 SRC = my_readline.c

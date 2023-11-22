@@ -1,63 +1,74 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int READLINE_READ_SIZE = 512;
 
-char readline_buffer[512];
+char *readline_buffer = NULL;
 
-void init_my_readline() { readline_buffer[0] = '\0'; }
-
-char *my_readline(int fd) {
-  // printf("%d\n", fd);
-  int k = 0;
-  //   int bytes_read;
-  //   do {
-  read(fd, readline_buffer, 10);
-  k++;
-  // for (int i = 0; i < 10; i++) {
-  //   printf("%c", readline_buffer[i]);
-  // }
-  //   } while (bytes_read != 0);
-  return readline_buffer;
+void init_my_readline() {
+    readline_buffer = malloc((READLINE_READ_SIZE + 2) * sizeof(char));
+    if (readline_buffer == NULL) {
+        perror("Failed to allocate memory for readline buffer");
+        exit(EXIT_FAILURE);
+    }
+    readline_buffer[0] = 0; // buffer_start
+    readline_buffer[1] = 0; // buffer_end
 }
 
-// char *my_readline(int fd) {
-//   // printf("%d\n", fd);
-//   int k = 0;
-//   int bytes_read;
-//   do {
-//     bytes_read = read(fd, readline_buffer, 10);
-//     k++;
-//     for (int i = 0; i < 10; i++) {
-//       printf("%c", readline_buffer[i]);
-//     }
-//   } while (bytes_read != 0);
-//   return readline_buffer;
-// }
+char *my_readline(int fd) {
+    int buffer_start = readline_buffer[0];
+    int buffer_end = readline_buffer[1];
+
+    if (buffer_start == buffer_end) {
+        buffer_end = read(fd, readline_buffer + 2, READLINE_READ_SIZE) + 2;
+        buffer_start = 2;
+
+        if (buffer_end <= 2) {
+            free(readline_buffer);
+            readline_buffer = NULL;
+            return NULL;
+        }
+
+        readline_buffer[0] = buffer_start;
+        readline_buffer[1] = buffer_end;
+    }
+
+    int newline_pos = -1;
+    for (int i = buffer_start; i < buffer_end; i++) {
+        if (readline_buffer[i] == '\n') {
+            newline_pos = i;
+            break;
+        }
+    }
+
+    int line_length = (newline_pos != -1) ? newline_pos - buffer_start : buffer_end - buffer_start;
+    char *line = malloc((line_length + 1) * sizeof(char));
+    if (line == NULL) {
+        return NULL;
+    }
+
+    memcpy(line, &readline_buffer[buffer_start], line_length);
+    line[line_length] = '\0';
+
+    buffer_start = (newline_pos != -1) ? newline_pos + 1 : buffer_end;
+
+    readline_buffer[0] = buffer_start;
+    readline_buffer[1] = buffer_end;
+
+    return line;
+}
 
 int main(int ac, char **av) {
-  char *str = NULL;
-  printf("ac: %d\n", ac);
-  const char *file_path = av[1];
-  const char *buffer_size = av[2];
-  printf("file_path: %s\n", file_path);
-  printf("buffer_size: %s\n", buffer_size);
-
-  int fd = open(file_path, O_RDONLY);
-  while ((str = my_readline(fd)) != NULL) {
-    printf("%s\n", str);
-    // if (str != NULL) {
-    printf("trying to free: %s\n", str);
-    free(str);
-    // }
-  }
-  close(fd);
-  //
-  //  Yes it's also working with stdin :-)
-  //    printf("%s", my_readline(0));
-  //
-
-  return 0;
+    char *str = NULL;
+    init_my_readline();
+    int fd = open(av[1], O_RDONLY);
+    while ((str = my_readline(fd)) != NULL) {
+        printf("%s\n", str);
+        free(str);
+    }
+    close(fd);
+    return 0;
 }
