@@ -9,6 +9,9 @@ int READLINE_READ_SIZE = 512;
 char *readline_buffer = NULL;
 
 void init_my_readline() {
+    if (readline_buffer != NULL) {
+        free(readline_buffer);
+    }
     readline_buffer = malloc((READLINE_READ_SIZE + 1) * sizeof(char));
     if (readline_buffer == NULL) {
         perror("Failed to allocate memory for readline buffer");
@@ -36,7 +39,7 @@ void append_to_line(char **line, const char *str) {
     }
 }
 
-void append_to_readline_buffer(const char *str) {
+void update_readline_buffer(const char *str) {
     size_t current_length = (readline_buffer != NULL) ? strlen(readline_buffer) : 0;
     size_t new_length = strlen(str);
     readline_buffer = realloc(readline_buffer, current_length + new_length + 1);
@@ -60,91 +63,46 @@ int has_newline(char *buffer){
   return -1;
 }
 
-void copy_sides(char *right, char *left, char *temp_buffer, int newline_pos) {
-  strncpy(left, temp_buffer, newline_pos);
-  left[newline_pos] = '\0';
+void split_line(char *temp_buffer, int newline_pos, char **line) {
+    char *right = malloc((READLINE_READ_SIZE - newline_pos) * sizeof(char));
+    char *left = malloc((newline_pos + 1) * sizeof(char));
 
-  strncpy(right, &temp_buffer[newline_pos + 1], READLINE_READ_SIZE - newline_pos);
-  right[READLINE_READ_SIZE - newline_pos - 1] = '\0';
+    if (left == NULL || right == NULL) {
+        perror("Failed to allocate memory for left/right");
+        exit(EXIT_FAILURE);
+    }
+
+    strncpy(left, temp_buffer, newline_pos);
+    left[newline_pos] = '\0';
+
+    strncpy(right, &temp_buffer[newline_pos + 1], READLINE_READ_SIZE - newline_pos);
+    right[READLINE_READ_SIZE - newline_pos - 1] = '\0';
+
+    append_to_line(line, left);
+    init_my_readline();
+    update_readline_buffer(right);
+
+    free(left), free(right); 
 }
-
-// void *check_for_newlines(char *temp_buffer, int newline_pos, char **line) {
-//     if ((newline_pos = has_newline(temp_buffer)) != -1) {
-//       if (newline_pos == 0) {
-//         printf("newline at beginning %s\n", temp_buffer);
-//         memmove(temp_buffer, temp_buffer+1, strlen(temp_buffer));
-//         append_to_readline_buffer(temp_buffer);
-//       } else if (newline_pos == READLINE_READ_SIZE) {
-//         printf("newline at end %s\n", temp_buffer);
-//       } else {
-//         printf("in the middle: %s\n", temp_buffer);
-//         char *right = malloc((READLINE_READ_SIZE - newline_pos) * sizeof(char));
-//         char *left = malloc((newline_pos + 1) * sizeof(char));
-
-//         if (left == NULL || right == NULL) {
-//             perror("Failed to allocate memory for left/right");
-//             exit(EXIT_FAILURE);
-//         }
-//         copy_sides(right, left, temp_buffer, newline_pos);
-
-//         append_to_line(line, left);
-//         append_to_readline_buffer(right);
-//         free(left);
-//         free(right);
-//         free(temp_buffer); 
-//       }
-//     } else {
-//       append_to_line(line, temp_buffer);
-//     }
-// }
 
 char *my_readline(int fd) {
   char *line = NULL;
   char *temp_buffer = malloc((READLINE_READ_SIZE + 1) * sizeof(char));
   int newline_pos = -1;
+
   if (readline_buffer[0] != '\0') {
-      if ((newline_pos = has_newline(readline_buffer)) != -1) {
-        char *right = malloc((READLINE_READ_SIZE - newline_pos) * sizeof(char));
-        char *left = malloc((newline_pos + 1) * sizeof(char));
+    if ((newline_pos = has_newline(readline_buffer)) > 0) {
+        split_line(readline_buffer, newline_pos, &line);
 
-        if (left == NULL || right == NULL) {
-            perror("Failed to allocate memory for left/right");
-            exit(EXIT_FAILURE);
-        }      
-        copy_sides(right, left, readline_buffer, newline_pos);
-        if (newline_pos == 0) {
-            // append_to_line(&line, readline_buffer);
-            strncpy(right, &readline_buffer[newline_pos + 1], READLINE_READ_SIZE - newline_pos);
-            right[READLINE_READ_SIZE - newline_pos - 1] = '\0';
-            free(readline_buffer);
-            init_my_readline();
+        free(temp_buffer);
 
-            append_to_readline_buffer(right);
-        } else if (newline_pos == READLINE_READ_SIZE) {
-            printf("newline at end %s\n", readline_buffer);
-        } else {
-            printf("in the middle: %s\n", readline_buffer);
-            append_to_line(&line, left);
-            free(readline_buffer);
-            init_my_readline();
-
-            append_to_readline_buffer(right);
-
-            free(temp_buffer);
-            return line;
-        }
-        free(left);
-        free(right);
-      } else {
+        return line;
+    } else {
         append_to_line(&line, readline_buffer);
-      }
-    free(readline_buffer);
-    free(temp_buffer);
+    }
     init_my_readline();
-    printf("returning\n");
-    return line;
-
   }
+
   ssize_t bytesRead;
   while ((bytesRead = read(fd, temp_buffer, READLINE_READ_SIZE)) > 0) {
     temp_buffer[bytesRead] = '\0';
@@ -152,28 +110,10 @@ char *my_readline(int fd) {
 
     if ((newline_pos = has_newline(temp_buffer)) != -1) {
       if (newline_pos == 0) {
-        printf("newline at beginning %s\n", temp_buffer);
-        memmove(temp_buffer, temp_buffer+1, strlen(temp_buffer));
-        printf("removed newling: %s\n", temp_buffer);
-        append_to_readline_buffer(temp_buffer);
-      } else if (newline_pos == READLINE_READ_SIZE) {
-        printf("newline at end %s\n", temp_buffer);
+        update_readline_buffer(&temp_buffer[1]);
       } else {
-        // printf("in the middle: %s\n", temp_buffer);
-        char *right = malloc((READLINE_READ_SIZE - newline_pos) * sizeof(char));
-        char *left = malloc((newline_pos + 1) * sizeof(char));
-
-        if (left == NULL || right == NULL) {
-            perror("Failed to allocate memory for left/right");
-            exit(EXIT_FAILURE);
-        }
-        copy_sides(right, left, temp_buffer, newline_pos);
-
-        append_to_line(&line, left);
-        append_to_readline_buffer(right);
-        free(left);
-        free(right);
-        free(temp_buffer); 
+        split_line(temp_buffer, newline_pos, &line);
+        free(temp_buffer);
 
         return line;
       }
@@ -181,7 +121,7 @@ char *my_readline(int fd) {
       append_to_line(&line, temp_buffer);
     }
   }
-  free(temp_buffer); 
+  free(temp_buffer);
 
   return line;
 }
