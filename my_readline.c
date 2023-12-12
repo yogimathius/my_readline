@@ -85,20 +85,27 @@ void split_line(char *temp_buffer, int newline_pos, char **line) {
     free(left), free(right); 
 }
 
+int contains_split_lines(int newline_pos, char *buffer, char **line) {
+    if ((newline_pos = has_newline(buffer)) > 0) {
+        split_line(buffer, newline_pos, line);
+        return 1;
+    } else {
+        append_to_line(line, buffer);
+        return 0;
+    }
+}
+
 char *my_readline(int fd) {
   char *line = NULL;
   char *temp_buffer = malloc((READLINE_READ_SIZE + 1) * sizeof(char));
   int newline_pos = -1;
 
   if (readline_buffer[0] != '\0') {
-    if ((newline_pos = has_newline(readline_buffer)) > 0) {
-        split_line(readline_buffer, newline_pos, &line);
+    if (contains_split_lines(newline_pos, readline_buffer, &line) == 1) {
 
         free(temp_buffer);
 
         return line;
-    } else {
-        append_to_line(&line, readline_buffer);
     }
     init_my_readline();
   }
@@ -107,20 +114,13 @@ char *my_readline(int fd) {
   while ((bytesRead = read(fd, temp_buffer, READLINE_READ_SIZE)) > 0) {
     temp_buffer[bytesRead] = '\0';
 
-
-    if ((newline_pos = has_newline(temp_buffer)) != -1) {
-      if (newline_pos == 0) {
-        update_readline_buffer(&temp_buffer[1]);
-      } else {
-        split_line(temp_buffer, newline_pos, &line);
+    if (contains_split_lines(newline_pos, temp_buffer, &line) == 1) {
         free(temp_buffer);
 
         return line;
-      }
-    } else {
-      append_to_line(&line, temp_buffer);
     }
   }
+
   free(temp_buffer);
 
   return line;
