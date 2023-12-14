@@ -5,8 +5,7 @@
 #include <unistd.h>
 
 int READLINE_READ_SIZE = 512;
-
-char *readline_buffer = NULL;
+char *READLINE_BUFFER = NULL;
 
 void check_null(char *line) {
     if (line == NULL) {
@@ -16,19 +15,18 @@ void check_null(char *line) {
 }
 
 void init_my_readline() {
-    if (readline_buffer != NULL) free(readline_buffer);
-    readline_buffer = malloc((READLINE_READ_SIZE + 1));
-    check_null(readline_buffer);
-    readline_buffer[0] = '\0';
+    if (READLINE_BUFFER != NULL) free(READLINE_BUFFER);
+    READLINE_BUFFER = malloc((READLINE_READ_SIZE + 1));
+    check_null(READLINE_BUFFER);
+    READLINE_BUFFER[0] = '\0';
 }
 
 void append_to_line(char **line, const char *str) {
-    size_t new_length = strlen(str);
     if (*line == NULL) {
         *line = strdup(str);
         check_null(*line);
     } else {
-        *line = realloc(*line, strlen(*line) + new_length + 1);
+        *line = realloc(*line, strlen(*line) + strlen(str) + 1);
         check_null(*line);
         strcat(*line, str);
     }
@@ -36,11 +34,10 @@ void append_to_line(char **line, const char *str) {
 
 void update_readline_buffer(const char *str) {
     init_my_readline();
-    size_t current_length = (readline_buffer != NULL) ? strlen(readline_buffer) : 0;
-    size_t new_length = strlen(str);
-    readline_buffer = realloc(readline_buffer, current_length + new_length + 1);
-    check_null(readline_buffer);
-    check_null(strncat(readline_buffer, str, new_length));
+    size_t current_length = (READLINE_BUFFER != NULL) ? strlen(READLINE_BUFFER) : 0;
+    READLINE_BUFFER = realloc(READLINE_BUFFER, current_length +  strlen(str) + 1);
+    check_null(READLINE_BUFFER);
+    check_null(strncat(READLINE_BUFFER, str,  strlen(str)));
 }
 
 int has_newline(char *buffer) {
@@ -58,13 +55,11 @@ char *copy_side(int size, char *buffer, int copy_len) {
     return side;
 }
 
-void split_line(char *temp_buffer, int newline_pos, char **line)
-{
+void split_line(char *temp_buffer, int newline_pos, char **line) {
     int total_size = READLINE_READ_SIZE - newline_pos;
-    
     char *right = copy_side(total_size, &temp_buffer[newline_pos + 1], total_size);
     char *left = copy_side(newline_pos + 1, temp_buffer, newline_pos);
-
+    
     append_to_line(line, left);
     update_readline_buffer(right);
 
@@ -86,8 +81,8 @@ char *my_readline(int fd) {
     char *temp_buffer = malloc((READLINE_READ_SIZE + 1));
     int newline_pos = -1;
 
-    if (readline_buffer[0] != '\0') {
-        if (check_line(newline_pos, readline_buffer, &line) == 1) {
+    if (READLINE_BUFFER[0] != '\0') {
+        if (check_line(newline_pos, READLINE_BUFFER, &line) == 1) {
             free(temp_buffer);
             return line;
         }
@@ -103,7 +98,6 @@ char *my_readline(int fd) {
         }
     }
 
-
     int len = line != NULL ? strlen(line) : 0;
     if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
      
@@ -111,10 +105,8 @@ char *my_readline(int fd) {
     return line;
 }
 
-int main(int ac, char **av)
-{
-    if (ac == 3)
-    {
+int main(int ac, char **av) {
+    if (ac == 3) {
         int fd = open(av[1], O_RDONLY);
 
         READLINE_READ_SIZE = atoi(av[2]);
@@ -122,8 +114,7 @@ int main(int ac, char **av)
         char *line = NULL;
         init_my_readline();
 
-        while ((line = my_readline(fd)))
-        {
+        while ((line = my_readline(fd))) {
             printf("from main: %s\n", line);
             free(line);
         }
