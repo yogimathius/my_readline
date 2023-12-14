@@ -15,8 +15,7 @@ void check_null(char *line) {
     }
 }
 
-void init_my_readline()
-{
+void init_my_readline() {
     if (readline_buffer != NULL) free(readline_buffer);
     readline_buffer = malloc((READLINE_READ_SIZE + 1));
     check_null(readline_buffer);
@@ -36,6 +35,7 @@ void append_to_line(char **line, const char *str) {
 }
 
 void update_readline_buffer(const char *str) {
+    init_my_readline();
     size_t current_length = (readline_buffer != NULL) ? strlen(readline_buffer) : 0;
     size_t new_length = strlen(str);
     readline_buffer = realloc(readline_buffer, current_length + new_length + 1);
@@ -50,28 +50,28 @@ int has_newline(char *buffer) {
     return -1;
 }
 
+char *copy_side(int size, char *buffer, int copy_len) {
+    char *side = malloc((size));
+    check_null(side);
+    strncpy(side, buffer, copy_len);
+    side[copy_len] = '\0';
+    return side;
+}
+
 void split_line(char *temp_buffer, int newline_pos, char **line)
 {
-    char *right = malloc((READLINE_READ_SIZE - newline_pos));
-    char *left = malloc((newline_pos + 1));
-    check_null(left);
-    check_null(right);
-
-    strncpy(left, temp_buffer, newline_pos);
-    left[newline_pos] = '\0';
-
-    strncpy(right, &temp_buffer[newline_pos + 1], READLINE_READ_SIZE - newline_pos);
-    right[READLINE_READ_SIZE - newline_pos - 1] = '\0';
+    int total_size = READLINE_READ_SIZE - newline_pos;
+    
+    char *right = copy_side(total_size, &temp_buffer[newline_pos + 1], total_size);
+    char *left = copy_side(newline_pos + 1, temp_buffer, newline_pos);
 
     append_to_line(line, left);
-    init_my_readline();
     update_readline_buffer(right);
 
     free(left), free(right);
 }
 
-int split_lines(int newline_pos, char *buffer, char **line)
-{
+int check_line(int newline_pos, char *buffer, char **line) {
     if ((newline_pos = has_newline(buffer)) > 0) {
         split_line(buffer, newline_pos, line);
         return 1;
@@ -87,7 +87,7 @@ char *my_readline(int fd) {
     int newline_pos = -1;
 
     if (readline_buffer[0] != '\0') {
-        if (split_lines(newline_pos, readline_buffer, &line) == 1) {
+        if (check_line(newline_pos, readline_buffer, &line) == 1) {
             free(temp_buffer);
             return line;
         }
@@ -97,17 +97,17 @@ char *my_readline(int fd) {
     ssize_t bytesRead;
     while ((bytesRead = read(fd, temp_buffer, READLINE_READ_SIZE)) > 0) {
         temp_buffer[bytesRead] = '\0';
-        if (split_lines(newline_pos, temp_buffer, &line) == 1) {
+        if (check_line(newline_pos, temp_buffer, &line) == 1) {
             free(temp_buffer);
             return line;
         }
     }
 
-    free(temp_buffer);
 
     int len = line != NULL ? strlen(line) : 0;
     if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
      
+    free(temp_buffer);
     return line;
 }
 
