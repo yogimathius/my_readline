@@ -129,7 +129,6 @@ char *my_readline(int fd)
         if (split_lines(newline_pos, readline_buffer, &line) == 1)
         {
             free(temp_buffer);
-
             return line;
         }
         init_my_readline();
@@ -143,13 +142,18 @@ char *my_readline(int fd)
         if (split_lines(newline_pos, temp_buffer, &line) == 1)
         {
             free(temp_buffer);
-
             return line;
         }
     }
 
     free(temp_buffer);
 
+    int len = line != NULL ? strlen(line) : 0;
+    if (len > 0 && line[len - 1] == '\n') {
+        line[len - 1] = '\0';
+    } else {
+        return NULL;
+    }
     return line;
 }
 
@@ -166,7 +170,7 @@ int main(int ac, char **av)
 
         while ((line = my_readline(fd)))
         {
-            printf("%s\n", line);
+            printf("from main: %s\n", line);
             free(line);
         }
         close(fd);
