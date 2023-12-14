@@ -10,14 +10,17 @@ Number of characters read will be set by the global variable READLINE_READ_SIZE
 You are allowed to maximum two global variables (one for your "storage" and one for READLINE_READ_SIZE). Be ready, we will change the value of READLINE_READ_SIZE.
 
 ## Description
-TODO - How have you solved the problem?
+- used a while loop to continue reading until no bytes read for each readline call
+- if the current buffer contains a new line, split on new line and either append to line returned or append to global buffer for using on next readline call
+- follow same pattern for checking if the global buffer is not null, splitting on newline and 
 
 ## Installation
-use `make` to compile the program, then run it
+use `make` to compile the program, then run it with the below listed command.
 
 ## Usage
+
 ```
-./my_readline
+./my_readline path_to_file buffer_size
 ```
 
 ### The Core Team
