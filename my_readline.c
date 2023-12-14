@@ -55,7 +55,7 @@ char *copy_side(int size, char *buffer, int copy_len) {
     return side;
 }
 
-void split_line(char *temp_buffer, int newline_pos, char **line) {
+void split_line(char **line, char *temp_buffer, int newline_pos) {
     int total_size = READLINE_READ_SIZE - newline_pos;
     char *right = copy_side(total_size, &temp_buffer[newline_pos + 1], total_size);
     char *left = copy_side(newline_pos + 1, temp_buffer, newline_pos);
@@ -66,9 +66,11 @@ void split_line(char *temp_buffer, int newline_pos, char **line) {
     free(left), free(right);
 }
 
-int check_line(int newline_pos, char *buffer, char **line) {
+int check_line(char *buffer, char **line) {
+    int newline_pos;
+
     if ((newline_pos = has_newline(buffer)) > 0) {
-        split_line(buffer, newline_pos, line);
+        split_line(line, buffer, newline_pos);
         return 1;
     } else {
         append_to_line(line, buffer);
@@ -79,10 +81,9 @@ int check_line(int newline_pos, char *buffer, char **line) {
 char *my_readline(int fd) {
     char *line = NULL;
     char *temp_buffer = malloc((READLINE_READ_SIZE + 1));
-    int newline_pos = -1;
 
     if (READLINE_BUFFER[0] != '\0') {
-        if (check_line(newline_pos, READLINE_BUFFER, &line) == 1) {
+        if (check_line(READLINE_BUFFER, &line) == 1) {
             free(temp_buffer);
             return line;
         }
@@ -92,7 +93,7 @@ char *my_readline(int fd) {
     ssize_t bytesRead;
     while ((bytesRead = read(fd, temp_buffer, READLINE_READ_SIZE)) > 0) {
         temp_buffer[bytesRead] = '\0';
-        if (check_line(newline_pos, temp_buffer, &line) == 1) {
+        if (check_line(temp_buffer, &line) == 1) {
             free(temp_buffer);
             return line;
         }
