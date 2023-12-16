@@ -42,20 +42,21 @@ int has_newline(char *buffer) {
     return newline_pos ? newline_pos - buffer : -1;
 }
 
-char *copy_side(int size, char *buffer, int copy_len) {
-    char *side = malloc((size));
-    check_null(side);
-    strncpy(side, buffer, copy_len);
-    side[copy_len] = '\0';
-    return side;
-}
-
 void split_line_and_update_buffer(char **line, char *temp_buffer, int newline_pos) {
-    int total_size = READLINE_READ_SIZE - newline_pos;
-    char *right = copy_side(total_size, &temp_buffer[newline_pos + 1], total_size);
-    char *left = copy_side(newline_pos + 1, temp_buffer, newline_pos);
-    
-    append_to_line(line, left);
+    char *right = malloc((READLINE_READ_SIZE - newline_pos));	
+    char *left = malloc((newline_pos + 1));	
+    check_null(left);	
+    check_null(right);	
+
+    strncpy(left, temp_buffer, newline_pos);	
+    left[newline_pos] = '\0';	
+
+    strncpy(right, &temp_buffer[newline_pos + 1], READLINE_READ_SIZE - newline_pos);	
+    right[READLINE_READ_SIZE - newline_pos - 1] = '\0';	
+
+
+    append_to_line(line, left);	    append_to_line(line, left);
+    init_my_readline();
     update_readline_buffer(right);
 
     free(left), free(right);
@@ -93,21 +94,4 @@ char *my_readline(int fd) {
     if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
      
     free(temp_buffer); return line;
-}
-
-int main(int ac, char **av) {
-    if (ac == 3) {
-        int fd = open(av[1], O_RDONLY);
-
-        READLINE_READ_SIZE = atoi(av[2]);
-
-        char *line = NULL;
-        init_my_readline();
-
-        while ((line = my_readline(fd))) {
-            printf("from main: %s\n", line);
-            free(line);
-        }
-        close(fd);
-    }
 }
