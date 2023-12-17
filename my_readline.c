@@ -55,7 +55,7 @@ void split_line_and_update_buffer(char **line, char *temp_buffer, int newline_po
     right[READLINE_READ_SIZE - newline_pos - 1] = '\0';	
 
 
-    append_to_line(line, left);	    append_to_line(line, left);
+    append_to_line(line, left);
     init_my_readline();
     update_readline_buffer(right);
 
