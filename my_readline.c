@@ -15,7 +15,9 @@ void check_null(char *line) {
 }
 
 void init_my_readline() {
-    if (READLINE_BUFFER != NULL) free(READLINE_BUFFER);
+    if (READLINE_BUFFER != NULL) {
+        free(READLINE_BUFFER);
+    }
     READLINE_BUFFER = malloc((READLINE_READ_SIZE + 1));
     check_null(READLINE_BUFFER);
     READLINE_BUFFER[0] = '\0';
@@ -56,7 +58,6 @@ void split_line_and_update_buffer(char **line, char *temp_buffer, int newline_po
 
 
     append_to_line(line, left);
-    init_my_readline();
     update_readline_buffer(right);
 
     free(left), free(right);
@@ -74,6 +75,10 @@ int check_and_process_line(char *buffer, char **line) {
 char *my_readline(int fd) {
     char *line = NULL;
     char *temp_buffer = malloc((READLINE_READ_SIZE + 1));
+
+    if (READLINE_BUFFER == NULL) {
+        init_my_readline();
+    }
 
     if (READLINE_BUFFER[0] != '\0') {
         if (check_and_process_line(READLINE_BUFFER, &line) == 1) {
@@ -94,4 +99,20 @@ char *my_readline(int fd) {
     if (len > 0 && line[len - 1] == '\n') line[len - 1] = '\0';
      
     free(temp_buffer); return line;
+}
+
+int main(int ac, char **av) {	
+    if (ac == 3) {	
+        int fd = open(av[1], O_RDONLY);	
+
+        READLINE_READ_SIZE = atoi(av[2]);	
+
+        char *line = NULL;	
+
+        while ((line = my_readline(fd))) {	
+            printf("from main: %s\n", line);	
+            free(line);	
+        }	
+        close(fd);	
+    }	
 }
